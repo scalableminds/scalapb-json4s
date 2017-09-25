@@ -1,12 +1,12 @@
 package com.trueaccord.scalapb.json
 
-import org.json4s.{JValue, JInt, JDouble}
-import org.json4s.jackson.JsonMethods._
-import org.json4s.JsonDSL._
-import org.scalatest.{FlatSpec, MustMatchers, OptionValues}
+import com.google.protobuf.util.{JsonFormat => JavaJsonFormat}
 import jsontest.test._
 import jsontest.test3._
-import com.google.protobuf.util.{JsonFormat => JavaJsonFormat}
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
+import org.json4s.{JDouble, JValue}
+import org.scalatest.{FlatSpec, MustMatchers, OptionValues}
 
 class JsonFormatSpec extends FlatSpec with MustMatchers with OptionValues {
   val TestProto = MyTest().update(
@@ -136,7 +136,7 @@ class JsonFormatSpec extends FlatSpec with MustMatchers with OptionValues {
   }
 
   "Empty object" should "give full json if including default values" in {
-    new Printer(includingDefaultValueFields = true).toJson(MyTest()) must be(
+    new Printer(includingDefaultValueFields = true, includingEmptySeqFields = true).toJson(MyTest()) must be(
       parse(
         """{
           |  "hello": "",
@@ -160,7 +160,7 @@ class JsonFormatSpec extends FlatSpec with MustMatchers with OptionValues {
   }
 
   "Empty object" should "with preserve field names should work" in {
-    new Printer(includingDefaultValueFields = true, preservingProtoFieldNames = true).toJson(MyTest()) must be(
+    new Printer(includingDefaultValueFields = true, preservingProtoFieldNames = true, includingEmptySeqFields = true).toJson(MyTest()) must be(
       parse(
         """{
           |  "hello": "",
