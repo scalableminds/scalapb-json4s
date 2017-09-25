@@ -1,13 +1,26 @@
-import ReleaseTransformations._
 import com.trueaccord.scalapb.compiler.Version.scalapbVersion
 
 scalaVersion := "2.11.8"
 
 crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.1")
 
-organization in ThisBuild := "com.trueaccord.scalapb"
-
 name := "scalapb-json4s"
+
+organization := "com.scalableminds"
+
+organizationName := "scalable minds UG (haftungsbeschränkt) & Co. KG"
+
+organizationHomepage := Some(url("http://scalableminds.com"))
+
+startYear := Some(2017)
+
+description := "A small library to load webknossos-wrap encoded files."
+
+homepage := Some(url("https://github.com/scalableminds/webknossos-wrap"))
+
+scmInfo := Some(ScmInfo(
+  url("https://github.com/scalableminds/webknossos-wrap"),
+  "https://github.com/scalableminds/webknossos-wrap.git"))
 
 scalacOptions in ThisBuild ++= {
   CrossVersion.partialVersion(scalaVersion.value) match {
@@ -16,24 +29,21 @@ scalacOptions in ThisBuild ++= {
   }
 }
 
-releaseCrossBuild := true
+publishMavenStyle := true
 
-releasePublishArtifactsAction := PgpKeys.publishSigned.value
+publishArtifact in Test := false
 
-releaseProcess := Seq[ReleaseStep](
-  checkSnapshotDependencies,
-  inquireVersions,
-  runClean,
-  runTest,
-  setReleaseVersion,
-  commitReleaseVersion,
-  tagRelease,
-  ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true),
-  setNextVersion,
-  commitNextVersion,
-  pushChanges,
-  ReleaseStep(action = Command.process("sonatypeReleaseAll", _), enableCrossBuild = true)
-)
+pomIncludeRepository := { _ => false }
+
+publishTo <<= version { (version: String) =>
+  val rootDir = "/srv/maven/"
+  val path =
+    if (version.trim.endsWith("SNAPSHOT"))
+      "snapshots"
+    else
+      "releases"
+  Some("scm.io intern repo" at "s3://maven.scm.io.s3-eu-central-1.amazonaws.com/" + path)
+}
 
 libraryDependencies ++= Seq(
   "com.trueaccord.scalapb" %% "scalapb-runtime" % scalapbVersion,
