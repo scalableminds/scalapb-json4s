@@ -59,6 +59,7 @@ case class FormatRegistry(
 
 class Printer(
   includingDefaultValueFields: Boolean = false,
+  includingEmptySeqFields: Boolean = false,
   preservingProtoFieldNames: Boolean = false,
   formattingLongAsNumber: Boolean = false,
   formatRegistry: FormatRegistry = JsonFormat.DefaultRegistry) {
@@ -78,8 +79,11 @@ class Printer(
       case null =>
       // We are never printing empty optional messages to prevent infinite recursion.
       case Nil =>
-        if (includingDefaultValueFields) {
-          b += JField(name, if (fd.isMapField) JObject() else JArray(Nil))
+        if (includingDefaultValueFields && fd.isMapField) {
+          b += JField(name, JObject())
+        }
+        if (includingEmptySeqFields && !fd.isMapField) {
+          b += JField(name, JArray(Nil))
         }
       case xs: Seq[GeneratedMessage] @unchecked =>
         if (fd.isMapField) {
@@ -121,7 +125,7 @@ class Printer(
         b += JField(name, defaultJValue(fd))
       }
       case PRepeated(xs) =>
-        if (xs.nonEmpty || includingDefaultValueFields) {
+        if (xs.nonEmpty || includingEmptySeqFields) {
           b += JField(name, JArray(xs.map(serializeSingleValue(fd, _, formattingLongAsNumber)).toList))
         }
       case v =>
