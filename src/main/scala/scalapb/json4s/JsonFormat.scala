@@ -1,4 +1,4 @@
-package com.trueaccord.scalapb.json
+package scalapb.json4s
 
 import com.fasterxml.jackson.core.Base64Variants
 import com.google.protobuf.ByteString
@@ -6,8 +6,8 @@ import com.google.protobuf.descriptor.FieldDescriptorProto
 import com.google.protobuf.duration.Duration
 import com.google.protobuf.struct.NullValue
 import com.google.protobuf.timestamp.Timestamp
-import com.trueaccord.scalapb.json.JsonFormat.GenericCompanion
-import com.trueaccord.scalapb._
+import scalapb.json4s.JsonFormat.GenericCompanion
+import scalapb._
 import org.json4s.JsonAST._
 import org.json4s.{Reader, Writer}
 
@@ -102,6 +102,7 @@ class Printer(
   includingDefaultValueFields: Boolean = false,
   preservingProtoFieldNames: Boolean = false,
   formattingLongAsNumber: Boolean = false,
+  formattingEnumsAsNumber: Boolean = false,
   formatRegistry: FormatRegistry = JsonFormat.DefaultRegistry,
   val typeRegistry: TypeRegistry = TypeRegistry.empty) {
   def print[A](m: GeneratedMessage): String = {
@@ -122,7 +123,7 @@ class Printer(
         if (includingDefaultValueFields) {
           b += JField(name, if (fd.isMapField) JObject() else JArray(Nil))
         }
-      case xs: Seq[GeneratedMessage] @unchecked =>
+      case xs: Iterable[GeneratedMessage] @unchecked =>
         if (fd.isMapField) {
           val mapEntryDescriptor = fd.scalaType.asInstanceOf[ScalaType.Message].descriptor
           val keyDescriptor = mapEntryDescriptor.findFieldByNumber(1).get
@@ -145,7 +146,7 @@ class Printer(
                   serializeSingleValue(valueDescriptor, x.getField(valueDescriptor), formattingLongAsNumber)
                 }
                 key -> value
-            }: _*))
+            }.toSeq: _*))
         } else {
           b += JField(name, JArray(xs.map(toJson).toList))
         }
@@ -158,7 +159,7 @@ class Printer(
 
   private def serializeNonMessageField(fd: FieldDescriptor, name: String, value: PValue, b: FieldBuilder) = {
     value match {
-      case PEmpty => if (includingDefaultValueFields) {
+      case PEmpty => if (includingDefaultValueFields && fd.containingOneof.isEmpty) {
         b += JField(name, defaultJValue(fd))
       }
       case PRepeated(xs) =>
@@ -169,7 +170,8 @@ class Printer(
         if (includingDefaultValueFields ||
           !fd.isOptional ||
           !fd.file.isProto3 ||
-          (v != JsonFormat.defaultValue(fd))) {
+          (v != JsonFormat.defaultValue(fd)) ||
+          fd.containingOneof.isDefined) {
           b += JField(name, serializeSingleValue(fd, v, formattingLongAsNumber))
         }
     }
@@ -211,7 +213,7 @@ class Printer(
     case PEnum(e) =>
       formatRegistry.getEnumWriter(e.containingEnum) match {
         case Some(writer) => writer(this, e)
-        case None => JString(e.name)
+        case None => if (formattingEnumsAsNumber) JInt(e.number) else JString(e.name)
       }
     case PInt(v) if fd.protoType.isTypeUint32 => JInt(unsignedInt(v))
     case PInt(v) if fd.protoType.isTypeFixed32 => JInt(unsignedInt(v))
@@ -506,7 +508,7 @@ object JsonFormat {
     }
   }
 
-  def jsonName(fd: FieldDescriptor) = {
+  def jsonName(fd: FieldDescriptor): String = {
     // protoc<3 doesn't know about json_name, so we fill it in if it's not populated.
     fd.asProto.jsonName.getOrElse(NameUtils.snakeCaseToCamelCase(fd.asProto.getName))
   }

@@ -1,11 +1,11 @@
 import ReleaseTransformations._
-import com.trueaccord.scalapb.compiler.Version.scalapbVersion
+import scalapb.compiler.Version.scalapbVersion
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.12"
 
-crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.1")
+crossScalaVersions := Seq("2.10.7", "2.11.12", "2.12.6")
 
-organization in ThisBuild := "com.trueaccord.scalapb"
+organization in ThisBuild := "com.thesamet.scalapb"
 
 name := "scalapb-json4s"
 
@@ -36,11 +36,12 @@ releaseProcess := Seq[ReleaseStep](
 )
 
 libraryDependencies ++= Seq(
-  "com.trueaccord.scalapb" %% "scalapb-runtime" % scalapbVersion,
+  "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion,
+  "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion % "protobuf,test",
   "org.json4s" %% "json4s-jackson" % "3.5.1",
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-  "com.google.protobuf" % "protobuf-java-util" % "3.2.0" % "test",
-  "com.google.protobuf" % "protobuf-java" % "3.2.0" % "protobuf"
+  "org.scalatest" %% "scalatest" % "3.0.5" % "test",
+  "com.google.protobuf" % "protobuf-java-util" % "3.4.0" % "test",
+  "com.google.protobuf" % "protobuf-java" % "3.4.0" % "protobuf"
 )
 
 lazy val Proto26Test = config("proto26") extend(Test)

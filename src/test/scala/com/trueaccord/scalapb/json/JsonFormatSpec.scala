@@ -9,6 +9,7 @@ import jsontest.test3._
 import com.google.protobuf.util.{JsonFormat => JavaJsonFormat}
 import com.google.protobuf.any.{Any => PBAny}
 import com.google.protobuf.util.JsonFormat.{TypeRegistry => JavaTypeRegistry}
+import jsontest.custom_collection.{Guitar, Studio}
 
 class JsonFormatSpec extends FlatSpec with MustMatchers with OptionValues {
 
@@ -151,6 +152,15 @@ class JsonFormatSpec extends FlatSpec with MustMatchers with OptionValues {
       MyTest3(trickOrTreat=MyTest3.TrickOrTreat.Treat(MyTest3())))
   }
 
+  "JsonFormat" should "encode and decode enums for proto3" in {
+    val v1Value = MyTest3(optEnum = MyTest3.MyEnum3.V1)
+    JsonFormat.toJson(v1Value) must be (parse("""{"optEnum": "V1"}"""))
+    val defaultValue = MyTest3(optEnum = MyTest3.MyEnum3.UNKNOWN)
+    JsonFormat.toJson(defaultValue) must be (parse("""{}"""))
+    JsonFormat.fromJsonString[MyTest3](JsonFormat.toJsonString(v1Value)) must be(v1Value)
+    JsonFormat.fromJsonString[MyTest3](JsonFormat.toJsonString(defaultValue)) must be(defaultValue)
+  }
+
   "parsing one offs" should "work correctly for issue 315" in {
     JsonFormat.fromJsonString[jsontest.issue315.Msg]("""
     {
@@ -210,7 +220,6 @@ class JsonFormatSpec extends FlatSpec with MustMatchers with OptionValues {
           |  "stringToBool": {},
           |  "optBs": "",
           |  "optBool": false,
-          |  "trick": 0,
           |  "fixed64ToBytes": {}
           |}""".stripMargin)
     )
@@ -234,7 +243,6 @@ class JsonFormatSpec extends FlatSpec with MustMatchers with OptionValues {
           |  "string_to_bool": {},
           |  "opt_bs": "",
           |  "opt_bool": false,
-          |  "trick": 0,
           |  "fixed64_to_bytes": {}
           |}""".stripMargin)
     )
@@ -388,6 +396,26 @@ class JsonFormatSpec extends FlatSpec with MustMatchers with OptionValues {
     val javaAny = com.google.protobuf.Any.pack(MyTest.toJavaProto(TestProto))
     val javaJson = anyEnabledJavaPrinter.print(javaAny)
     anyEnabledParser.fromJsonString[PBAny](javaJson).unpack[MyTest] must be(TestProto)
+  }
+
+  "toJsonString" should "generate correct JSON for messages with custom collection type" in {
+    val studio = Studio().addGuitars(Guitar(numberOfStrings = 12))
+    val expectedStudioJsonString = """{"guitars":[{"numberOfStrings":12}]}"""
+    val studioJsonString = JsonFormat.toJsonString(studio)
+    studioJsonString must be(expectedStudioJsonString)
+  }
+
+  "fromJsonString" should "parse JSON correctly to message with custom collection type" in {
+    val expectedStudio = Studio().addGuitars(Guitar(numberOfStrings = 12))
+    val studioJsonString = """{"guitars":[{"numberOfStrings":12}]}"""
+    import Studio.messageCompanion
+    val studio = JsonFormat.fromJsonString(studioJsonString)
+    studio must be(expectedStudio)
+  }
+
+  "formatEnumAsNumber" should "format enums as number" in {
+    val p = MyTest().update(_.optEnum := MyEnum.V2)
+    new Printer(formattingEnumsAsNumber = true).toJson(p) must be(parse(s"""{"optEnum":2}"""))
   }
   
 }
